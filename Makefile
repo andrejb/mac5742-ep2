@@ -6,7 +6,7 @@ FRAC = 0.5
 all: sorteio
 
 clean:
-	rm -f $(EXAMPLES) *~ *.o
+	rm -f $(EXAMPLES) *~ *.o sorteio
 
 sorteio: src/sorteio.f90
 	$(FC) $(FCFLAGS) $^ -o $@
