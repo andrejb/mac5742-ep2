@@ -17,4 +17,7 @@ run: sorteio
 edit:
 	vim -p src/* Makefile
 
-.PHONY: all clean run edit
+stats:
+	for j in `seq 1 4`; do for i in `seq 10 5 150`; do make run NPROC=$$i FRAC=0.$$j | awk '{total+=$$1} END {print '$$i' " " total}'; done > /tmp/testes/teste-0.$$j.txt; done
+
+.PHONY: all clean run edit stats

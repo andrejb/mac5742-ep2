@@ -7,7 +7,6 @@ program sorteio
   integer :: active
   character*10 :: cfrac
   real :: frac
-  integer :: mensagens
 
   ! Inicia o MPI
   call MPI_INIT(ierr)
@@ -29,7 +28,6 @@ program sorteio
   next = mod((rank + 1), size)
   from = mod((rank + size - 1), size)
   active = 0
-  mensagens = 0
 
   ! inicializa numeros aleatorios
   call itime(timeArray) ! Obtem a hora atual
@@ -39,9 +37,7 @@ program sorteio
   ! enviando quantos processos faltam mudar para o estado "Ativado".
   if (rank .eq. 0) then
      call get_random_int(0,size-1,destination)
-     !print *, 'Inicializacao:'
      !print *, '  0 -> ',destination,': faltam ',message,' processos.'
-     mensagens = mensagens+1
      call MPI_SEND(message, 1, MPI_INTEGER, destination, tag, MPI_COMM_WORLD, ierr)
   endif
 
@@ -64,9 +60,9 @@ program sorteio
     ! Caso a mensagem seja -1, devo terminar.
     if (message .eq. -1) then
       if (active .eq. 1) then
-        print '(I4,A,I0,A)', rank, ': ativo          (',mensagens,') mensagens'
+        print '(I4,A)', rank, ': ativo'
       else
-        print '(I4,A,I0,A)', rank, ':       inativo  (',mensagens,') mensagens'
+        print '(I4,A)', rank, ':       inativo'
       end if
       exit
     end if
@@ -75,7 +71,6 @@ program sorteio
     ! devo avisar aos outros disto.
     if (message .eq. 0) then
       do i = 0, size-1
-        mensagens = mensagens+1
         call MPI_SEND(-1, 1, MPI_INTEGER, i, tag, MPI_COMM_WORLD, ierr)
       end do
     end if
@@ -83,7 +78,6 @@ program sorteio
     ! Se eu ja estou ativo passo a mensagem para frente.
     if (active .eq. 1) then
       !print *, '  ',rank,' -> ',destination,': faltam ',message,' processos.'
-      mensagens = mensagens+1
       call MPI_SEND(message, 1, MPI_INTEGER, next, tag, MPI_COMM_WORLD, ierr)
     ! Caso contrario, mudo meu estado e repito o processo.
     else
@@ -91,7 +85,6 @@ program sorteio
       message = message - 1
       call get_random_int(0,size-1,destination)
       !print *, '  ',rank,' -> ',destination,': faltam ',message,' processos.'
-      mensagens = mensagens+1
       call MPI_SEND(message, 1, MPI_INTEGER, destination, tag, MPI_COMM_WORLD, ierr)
     end if
   end do
