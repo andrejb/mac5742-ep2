@@ -7,6 +7,7 @@ program sorteio
   integer :: active
   character*10 :: cfrac
   real :: frac
+  integer, dimension(2) :: seed
 
 
   ! --------------------------------------------------------------------------
@@ -34,8 +35,7 @@ program sorteio
   active = 0
 
   ! inicializa numeros aleatorios
-  call itime(timeArray) ! obtem a hora atual
-  destination = int(rand(timeArray(1)+timeArray(2)+timeArray(3))) ! este primeiro valor eh jogado fora.
+  call init_random_seed()
 
   ! se somos o processo 0, iniciamos o ciclo escolhendo um processo aleatorio e
   ! enviando quantos processos faltam mudar para o estado "Ativado".
@@ -131,8 +131,30 @@ contains
 subroutine get_random_int(start_int, end_int, random_int)
   integer, intent(in) :: start_int, end_int
   integer, intent(out) :: random_int
-  random_int = int(rand()*(end_int+1-start_int))+start_int
+  real :: r
+  call random_number(r)
+  random_int = int(r*(end_int+1-start_int))+start_int
 end subroutine get_random_int
+
+
+! ---------------------------------------------------------------------------- 
+! subrotina: init_random_seed
+!
+! inicializa a semente de numeros pseudoaleatorios.
+subroutine init_random_seed()
+  integer :: i, n, clock
+  integer, dimension(:), allocatable :: seed
+
+  call random_seed(size = n)
+  allocate(seed(n))
+
+  call system_clock(count=clock)
+
+  seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+  call random_seed(put = seed)
+
+  deallocate(seed)
+end subroutine
 
 end program
       
