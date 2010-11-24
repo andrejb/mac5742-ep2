@@ -1,38 +1,45 @@
-!
-! Copyright (c) 2004-2006 The Trustees of Indiana University and Indiana
-!                         University Research and Technology
-!                         Corporation.  All rights reserved.
-! Copyright (c) 2006      Cisco Systems, Inc.  All rights reserved.
-!
-! Simple ring test program
-!
-program ring
+! Adaptado do exemplo do pacote openmpi-doc do debian estável (lenny).
+program sorteio
   use mpi
   implicit none
-  integer :: rank, size, tag, next, from, message, ierr
+  integer :: rank, size, tag, next, from, message, ierr, destination, i
+  integer*4 :: timeArray(3) ! Contem a hora, minuto e segundos
+  integer :: active
+  character*10 :: cfrac
+  real :: frac
 
-! Start up MPI
-
+  ! Inicia o MPI
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD, rank, ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD, size, ierr)
 
-! Calculate the rank of the next process in the ring.  Use the modulus
-! operator so that the last process "wraps around" to rank zero.
+  ! Verifica se o argumento da linha de comando faz sentido
+  call getarg(1,cfrac)
+  read(cfrac,*) frac
+  if (frac .lt. 0.0 .or. frac .gt. 1.0) then
+    print *, "A fracao (", frac, ") esta fora do esperado."
+    call MPI_FINALIZE(ierr)
+    call exit(1)
+  end if
+  message = ceiling(frac*size)
 
+  ! Inicializa o anel
   tag = 201
   next = mod((rank + 1), size)
   from = mod((rank + size - 1), size)
-      
-! If we are the "master" process (i.e., MPI_COMM_WORLD rank 0), put
-! the number of times to go around the ring in the message.
+  active = 0
 
+  ! inicializa numeros aleatorios
+  call itime(timeArray) ! Obtem a hora atual
+  destination = int(rand(timeArray(1)+timeArray(2)+timeArray(3))) ! este primeiro valor eh jogado fora.
+
+  ! Se somos o processo 0, iniciamos o ciclo escolhendo um processo aleatorio e
+  ! enviando quantos processos faltam mudar para o estado "Ativado".
   if (rank .eq. 0) then
-     message = 10
-
-     print *, 'Process 0 sending ', message, ' to ', next, ' tag ', tag, ' (', size, ' processes in ring)'
-     call MPI_SEND(message, 1, MPI_INTEGER, next, tag, MPI_COMM_WORLD, ierr)
-     print *, 'Process 0 sent to ', next
+     call get_random_int(0,size-1,destination)
+     !print *, 'Inicializacao:'
+     !print *, '  0 -> ',destination,': faltam ',message,' processos.'
+     call MPI_SEND(message, 1, MPI_INTEGER, destination, tag, MPI_COMM_WORLD, ierr)
   endif
 
 ! Pass the message around the ring.  The exit mechanism works as
@@ -42,32 +49,49 @@ program ring
 ! the next process and then quits.  By passing the 0 message first,
 ! every process gets the 0 message and can quit normally.
 
-10 call MPI_RECV(message, 1, MPI_INTEGER, from, tag, MPI_COMM_WORLD, &
-        MPI_STATUS_IGNORE, ierr)
+  do
+    call MPI_RECV(message, 1, MPI_INTEGER, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &
+                  MPI_STATUS_IGNORE, ierr)
 
-  if (rank .eq. 0) then
-     message = message - 1
-     print *, 'Process 0 decremented value:', message
-  endif
+    ! Caso a mensagem seja -1, devo terminar.
+    if (message .eq. -1) then
+      print *, 'Processo ', rank, ': ativo = ',active,'.'
+      exit
+    end if
 
-  call MPI_SEND(message, 1, MPI_INTEGER, next, tag, MPI_COMM_WORLD, ierr)
-      
-  if (message .eq. 0) then
-     print *, 'Process ', rank, ' exiting'
-     goto 20
-  endif
-  goto 10
+    ! Caso a mensagem seja 0, nao ha mais processos para serem alterado e eu
+    ! devo avisar aos outros disto.
+    if (message .eq. 0) then
+      do i = 0, size-1
+        call MPI_SEND(-1, 1, MPI_INTEGER, i, tag, MPI_COMM_WORLD, ierr)
+      end do
+    end if
 
-! The last process does one extra send to process 0, which needs to be
-! received before the program can exit
-
- 20 if (rank .eq. 0) then
-     call MPI_RECV(message, 1, MPI_INTEGER, from, tag, MPI_COMM_WORLD, &
-          MPI_STATUS_IGNORE, ierr)
-  endif
-
-! All done
+    ! Se eu ja estou ativo passo a mensagem para frente.
+    if (active .eq. 1) then
+      !print *, '  ',rank,' -> ',destination,': faltam ',message,' processos.'
+      call MPI_SEND(message, 1, MPI_INTEGER, next, tag, MPI_COMM_WORLD, ierr)
+    ! Caso contrario, mudo meu estado e repito o processo.
+    else
+      active = 1
+      message = message - 1
+      call get_random_int(0,size-1,destination)
+      !print *, '  ',rank,' -> ',destination,': faltam ',message,' processos.'
+      call MPI_SEND(message, 1, MPI_INTEGER, destination, tag, MPI_COMM_WORLD, ierr)
+    end if
+  end do
 
   call MPI_FINALIZE(ierr)
+
+contains
+
+! Retorna um inteiro aleatorio entre start_int e end_int. Supoe que ja houve
+! uma inicializacao previa dos numeros aleatorios.
+subroutine get_random_int(start_int, end_int, random_int)
+  integer, intent(in) :: start_int, end_int
+  integer, intent(out) :: random_int
+  random_int = int(rand()*(end_int+1-start_int))+start_int
+end subroutine get_random_int
+
 end program
       
