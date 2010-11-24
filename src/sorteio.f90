@@ -42,13 +42,18 @@ program sorteio
      call MPI_SEND(message, 1, MPI_INTEGER, destination, tag, MPI_COMM_WORLD, ierr)
   endif
 
-! Pass the message around the ring.  The exit mechanism works as
-! follows: the message (a positive integer) is passed around the ring.
-! Each time it passes rank 0, it is decremented.  When each processes
-! receives a message containing a 0 value, it passes the message on to
-! the next process and then quits.  By passing the 0 message first,
-! every process gets the 0 message and can quit normally.
-
+  ! loop principal:
+  !
+  ! enquanto (1), faça:
+  !   aguarde uma mensagem com o número de processos que faltam mudar de estado.
+  !   se (já estou ocupado), então
+  !     envie o número de processos que faltam mudar de estado para o próximo no
+  !       anel.
+  !   senão
+  !     entre em estado ocupado.
+  !     decremente o número de processos que faltam mudar de estado.
+  !     escolha um nó aleatoriamente.
+  !     envie o número de processos que faltam mudar de estado para este nó.
   do
     call MPI_RECV(message, 1, MPI_INTEGER, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &
                   MPI_STATUS_IGNORE, ierr)
