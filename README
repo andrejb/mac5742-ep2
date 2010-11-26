@@ -1,0 +1,67 @@
+MAC5742 - EP2 - 2o. semestre de 2010
+====================================
+
+Seções deste arquivo:
+
+  1. Grupo.
+  2. Conteúdo do diretório.
+  3. Como compilar.
+  4. Como rodar.
+  5. Funcionamento.
+
+
+1. Grupo
+--------
+
+  * André Jucovsky Bianchi - 3682247
+  * Patricia Cortes Nogueira - 3150751
+
+
+2. Conteúdo do diretório
+------------------------
+
+  .
+  |-- Makefile        - o arquivo do GNU make.
+  |-- README          - este arquivo.
+  |-- bin             - diretório temporário para binários.
+  |-- ref             - referências utilizadas.
+  `-- src
+      |-- qsort.f90   - quicksort para ordenação de vetores.
+      `-- sorteio.f90 - código fonte do nosso programa.
+
+
+3. Como compilar
+----------------
+
+Para compilar, digite:
+
+  $ make
+
+
+4. Como rodar
+-------------
+
+Para rodar o programa com os valores padrão de 10 processos e fração de 0.5, digite:
+
+  $ make run
+
+Para escolher um novo número de processos e uma nova fração, digite:
+
+  $ make run NPROC=XX FRAC=0.YY
+
+
+5. Funcionamento
+----------------
+
+Primeiro, cada processo sorteia aleatoriamente um número entre 0 e 1 e estes
+números são compartilhados com os outros processos utilizando a função
+MPI_GATHER.
+
+Em seguida, cada processo ordena o vetor de números escolhidos guardando a
+indicação de qual número foi escolhido por cada processo e verifica se seu
+número está entre os teto(frac*N) primeiros. Se este for o caso, o processo
+altera seu estado.
+
+Toda esta parte do programa é simétrica, ou seja, todos os processos executam
+exatamente o mesmo código. Ao final, incluímos uma parte assimétrica para
+permitir que os estados finais sejam impressos em ordem, utilizando um anel.
