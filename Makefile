@@ -6,10 +6,17 @@ FRAC = 0.5
 all: sorteio
 
 clean:
-	rm -f $(EXAMPLES) *~ *.o sorteio
+	rm -f $(EXAMPLES) *~ *.o sorteio *.mod bin/*
 
-sorteio: src/sorteio.f90
-	$(FC) $(FCFLAGS) $^ -o $@
+sorteio: bin/sorteio.o bin/qsort.o
+	${FC} ${FCFLAGS} ${FCOPTFLAGS} -o $@ $^
+
+bin/sorteio.o: bin/qsort.o
+bin/%.o: src/%.f90
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+qsort_module.mod: src/qsort.f90
+	$(FC) $(FCFLAGS) -c $< -o $@
 
 run: sorteio
 	mpirun -np $(NPROC) $< $(FRAC)
